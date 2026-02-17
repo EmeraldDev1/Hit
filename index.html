@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stage Timer</title>
+<style>
+body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    background: #F4F1EC;
+    color: #2A2522;
+    text-align: center;
+}
+
+.container {
+    padding: 20px;
+    max-width: 500px;
+    margin: auto;
+}
+
+h1 {
+    font-size: 20px;
+    margin-bottom: 20px;
+}
+
+input[type=range] {
+    width: 100%;
+}
+
+button {
+    width: 100%;
+    padding: 15px;
+    margin: 8px 0;
+    font-size: 18px;
+    border: none;
+    border-radius: 8px;
+    background: #ECE6DD;
+}
+
+button.primary {
+    background: #3B6E5A;
+    color: white;
+}
+
+#difficultyDisplay {
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+.small {
+    font-size: 12px;
+    margin-top: 5px;
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>Set Difficulty & Choose Mode</h1>
+
+<label>Starting Difficulty</label>
+<input type="range" id="difficulty" min="1" max="11" step="1" value="1">
+
+<label>Diff Increment Multi</label>
+<input type="range" id="multi" min="0" max="5" step="0.2" value="1">
+
+<button onclick="start('pen')">Pen</button>
+<button onclick="start('toke')">Toke</button>
+
+<h2 id="mainLabel"></h2>
+<div id="difficultyDisplay"></div>
+<div class="small" id="nextLabel"></div>
+
+<button id="actionBtn" class="primary" style="display:none;" onclick="action()">
+Done
+</button>
+
+</div>
+
+<script>
+let DIFF_MIN = 1;
+let DIFF_MAX = 11;
+
+let mode = null;
+let running = false;
+let turn = 0;
+let difficulty = 1;
+let manual11 = false;
+let nextIncrement = 0;
+
+const mainLabel = document.getElementById("mainLabel");
+const diffDisplay = document.getElementById("difficultyDisplay");
+const nextLabel = document.getElementById("nextLabel");
+const actionBtn = document.getElementById("actionBtn");
+
+function updateColor(v) {
+    if (v >= 11) {
+        diffDisplay.style.color = "#7B3FE4";
+        return;
+    }
+
+    let t = (v - DIFF_MIN) / (DIFF_MAX - DIFF_MIN);
+
+    let r, g;
+    if (t <= 0.5) {
+        r = Math.floor(255 * t * 2);
+        g = 255;
+    } else {
+        r = 255;
+        g = Math.floor(255 * (1 - (t - 0.5) * 2));
+    }
+
+    diffDisplay.style.color = `rgb(${r},${g},0)`;
+}
+
+function setDiffText() {
+    if (manual11) {
+        diffDisplay.innerText = "Difficulty: 11 (Nonstop)";
+    } else {
+        diffDisplay.innerText = "Difficulty: " + difficulty.toFixed(2);
+    }
+    updateColor(difficulty);
+}
+
+function getDelay() {
+    if (manual11) return 5;
+
+    let d = difficulty;
+    let avg;
+
+    if (d <= 5) {
+        avg = 150 - ((d - 1) / 4) * (150 - 65);
+    } else {
+        avg = 65 - ((d - 5) / 5) * (65 - 12);
+    }
+
+    let jitter = 0.8 + Math.random() * 0.4;
+    return avg * jitter;
+}
+
+function increaseDifficulty() {
+    difficulty = Math.min(difficulty + nextIncrement, 10);
+    setDiffText();
+}
+
+function start(selectedMode) {
+    if (running) return;
+
+    mode = selectedMode;
+    running = true;
+    turn = 1;
+
+    let selected = parseFloat(document.getElementById("difficulty").value);
+    difficulty = Math.min(selected, 10);
+    manual11 = selected == 11;
+
+    document.querySelectorAll("input, button").forEach(el => {
+        if (!el.onclick) el.style.display = "none";
+    });
+
+    setDiffText();
+    nextStage();
+}
+
+function nextStage() {
+    if (!running) return;
+
+    mainLabel.innerText = "Grace Period";
+    actionBtn.style.display = "none";
+
+    let multi = parseFloat(document.getElementById("multi").value);
+    nextIncrement = Math.round((Math.random() * 0.4 + 0.4) * multi * 100) / 100;
+
+    let debuff = (mode === "toke") ? " // 5x speed debuff" : "";
+    nextLabel.innerText = "+" + nextIncrement + " next turn // Turn " + turn + debuff;
+
+    let delay = getDelay();
+    if (mode === "toke") delay *= 5;
+
+    setTimeout(promptReady, delay * 1000);
+}
+
+function promptReady() {
+    mainLabel.innerText = "Get Ready ...";
+    beep();
+    setTimeout(startAction, 3000);
+}
+
+function startAction() {
+    if (mode === "pen") {
+        mainLabel.innerText = "Hit! (10s+)";
+        actionBtn.style.display = "block";
+    } else {
+        mainLabel.innerText = "Hit!";
+        actionBtn.style.display = "block";
+    }
+}
+
+function action() {
+    actionBtn.style.display = "none";
+
+    if (mode === "pen") {
+        mainLabel.innerText = "Hold. (8s)";
+        setTimeout(completeTurn, 8000);
+    } else {
+        completeTurn();
+    }
+}
+
+function completeTurn() {
+    increaseDifficulty();
+    turn++;
+    nextStage();
+}
+
+function beep() {
+    let ctx = new (window.AudioContext || window.webkitAudioContext)();
+    let osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(800, ctx.currentTime);
+    osc.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.15);
+}
+</script>
+
+</body>
+</html>
