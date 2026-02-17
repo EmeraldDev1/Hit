@@ -236,20 +236,22 @@ function completeTurn() {
 
 /* ---- BEEP ---- */
 function beep() {
-    if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+    if (ctx.state === "suspended") {
+        ctx.resume();
     }
 
-    const now = audioCtx.currentTime;
+    const now = ctx.currentTime;
 
     for (let i = 0; i < 3; i++) {
-        const osc = audioCtx.createOscillator();
+        const osc = ctx.createOscillator();
         osc.type = "sine";
         osc.frequency.setValueAtTime(925, now);
 
-        osc.connect(audioCtx.destination);
+        osc.connect(ctx.destination);
 
-        const startTime = now + i * 0.25;  // space between beeps
+        const startTime = now + i * 0.25;
         osc.start(startTime);
         osc.stop(startTime + 0.15);
     }
