@@ -56,16 +56,18 @@ button.primary {
 <body>
 <div class="container">
 
-<h1>Set Difficulty & Choose Mode</h1>
+<div id="setupUI">
+    <h1>Set Difficulty & Choose Mode</h1>
 
-<label>Starting Difficulty</label>
-<input type="range" id="difficulty" min="1" max="11" step="1" value="1">
+    <label>Starting Difficulty: <span id="diffValue">1</span></label>
+    <input type="range" id="difficulty" min="1" max="11" step="1" value="1">
 
-<label>Diff Increment Multi</label>
-<input type="range" id="multi" min="0" max="5" step="0.2" value="1">
+    <label>Diff Increment Multi: <span id="multiValue">1</span></label>
+    <input type="range" id="multi" min="0" max="5" step="0.2" value="1">
 
-<button onclick="start('pen')">Pen</button>
-<button onclick="start('toke')">Toke</button>
+    <button onclick="start('pen')">Pen</button>
+    <button onclick="start('toke')">Toke</button>
+</div>
 
 <h2 id="mainLabel"></h2>
 <div id="difficultyDisplay"></div>
@@ -92,7 +94,18 @@ const mainLabel = document.getElementById("mainLabel");
 const diffDisplay = document.getElementById("difficultyDisplay");
 const nextLabel = document.getElementById("nextLabel");
 const actionBtn = document.getElementById("actionBtn");
+const setupUI = document.getElementById("setupUI");
 
+const diffSlider = document.getElementById("difficulty");
+const multiSlider = document.getElementById("multi");
+const diffValue = document.getElementById("diffValue");
+const multiValue = document.getElementById("multiValue");
+
+/* ---- SHOW LIVE SLIDER VALUES ---- */
+diffSlider.oninput = () => diffValue.innerText = diffSlider.value;
+multiSlider.oninput = () => multiValue.innerText = multiSlider.value;
+
+/* ---- COLOR LOGIC ---- */
 function updateColor(v) {
     if (v >= 11) {
         diffDisplay.style.color = "#7B3FE4";
@@ -100,8 +113,8 @@ function updateColor(v) {
     }
 
     let t = (v - DIFF_MIN) / (DIFF_MAX - DIFF_MIN);
-
     let r, g;
+
     if (t <= 0.5) {
         r = Math.floor(255 * t * 2);
         g = 255;
@@ -122,6 +135,7 @@ function setDiffText() {
     updateColor(difficulty);
 }
 
+/* ---- DIFFICULTY CURVE ---- */
 function getDelay() {
     if (manual11) return 5;
 
@@ -143,6 +157,7 @@ function increaseDifficulty() {
     setDiffText();
 }
 
+/* ---- START ---- */
 function start(selectedMode) {
     if (running) return;
 
@@ -150,25 +165,24 @@ function start(selectedMode) {
     running = true;
     turn = 1;
 
-    let selected = parseFloat(document.getElementById("difficulty").value);
+    let selected = parseFloat(diffSlider.value);
     difficulty = Math.min(selected, 10);
     manual11 = selected == 11;
 
-    document.querySelectorAll("input, button").forEach(el => {
-        if (!el.onclick) el.style.display = "none";
-    });
+    setupUI.style.display = "none";
 
     setDiffText();
     nextStage();
 }
 
+/* ---- GAME FLOW ---- */
 function nextStage() {
     if (!running) return;
 
     mainLabel.innerText = "Grace Period";
     actionBtn.style.display = "none";
 
-    let multi = parseFloat(document.getElementById("multi").value);
+    let multi = parseFloat(multiSlider.value);
     nextIncrement = Math.round((Math.random() * 0.4 + 0.4) * multi * 100) / 100;
 
     let debuff = (mode === "toke") ? " // 5x speed debuff" : "";
@@ -189,11 +203,10 @@ function promptReady() {
 function startAction() {
     if (mode === "pen") {
         mainLabel.innerText = "Hit! (10s+)";
-        actionBtn.style.display = "block";
     } else {
         mainLabel.innerText = "Hit!";
-        actionBtn.style.display = "block";
     }
+    actionBtn.style.display = "block";
 }
 
 function action() {
@@ -213,6 +226,7 @@ function completeTurn() {
     nextStage();
 }
 
+/* ---- BEEP ---- */
 function beep() {
     let ctx = new (window.AudioContext || window.webkitAudioContext)();
     let osc = ctx.createOscillator();
